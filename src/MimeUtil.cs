@@ -20,7 +20,7 @@ using System.Threading.Tasks;
 namespace Soenneker.Email.Mime;
 
 /// <inheritdoc cref="IMimeUtil"/>
-public class MimeUtil : IMimeUtil
+public sealed class MimeUtil : IMimeUtil
 {
     private readonly ILogger<MimeUtil> _logger;
     private readonly IMemoryStreamUtil _memoryStreamUtil;
@@ -54,7 +54,7 @@ public class MimeUtil : IMimeUtil
             _useSsl = config.GetValueStrict<bool>("Smtp:UseSsl");
         }
 
-        _retryPolicy = Policy.Handle<Exception>()
+        _retryPolicy = Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
                              .WaitAndRetryAsync(5, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)) + TimeSpan.FromMilliseconds(RandomUtil.Next(100, 750)),
                                  (exception, timeSpan, attempt, _) =>
                                  {
