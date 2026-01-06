@@ -45,6 +45,6 @@
         <PackageReference Include="Polly" Version="8.6.5" />
         <PackageReference Include="Soenneker.Extensions.Configuration" Version="4.0.750" />
         <PackageReference Include="Soenneker.Extensions.Stream" Version="4.0.95" />
-        <PackageReference Include="Soenneker.Utils.MemoryStream" Version="4.0.1333" />
+        <PackageReference Include="Soenneker.Utils.MemoryStream" Version="4.0.1334" />
     </ItemGroup>
 </Project>
