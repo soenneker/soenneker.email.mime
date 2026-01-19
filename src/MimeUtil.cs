@@ -1,4 +1,5 @@
 ﻿using MailKit.Net.Smtp;
+using MailKit.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MimeKit;
@@ -32,6 +33,7 @@ public sealed class MimeUtil : IMimeUtil
     private readonly bool _logContent;
     private readonly bool _enabled;
     private readonly bool _useSsl;
+    private readonly bool _useStartTls;
     private readonly bool _acceptAnyCert;
 
     private readonly AsyncRetryPolicy _retryPolicy;
@@ -52,6 +54,7 @@ public sealed class MimeUtil : IMimeUtil
             _host = config.GetValueStrict<string>("Smtp:Host");
             _port = config.GetValueStrict<int>("Smtp:Port");
             _useSsl = config.GetValueStrict<bool>("Smtp:UseSsl");
+            _useStartTls = config.GetValue("Smtp:UseStartTls", false);
         }
 
         _retryPolicy = Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
@@ -92,7 +95,9 @@ public sealed class MimeUtil : IMimeUtil
             client.ServerCertificateValidationCallback = (s, c, h, e) => true;
         }
 
-        await client.ConnectAsync(_host, _port!.Value, _useSsl, cancellationToken).NoSync();
+        SecureSocketOptions options = _useSsl ? SecureSocketOptions.SslOnConnect :  _useStartTls ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
+
+        await client.ConnectAsync(_host, _port!.Value, options, cancellationToken).NoSync();
         await client.AuthenticateAsync(_username, _password, cancellationToken).NoSync();
         await client.SendAsync(message, cancellationToken).NoSync();
         await client.DisconnectAsync(true, cancellationToken).NoSync();
