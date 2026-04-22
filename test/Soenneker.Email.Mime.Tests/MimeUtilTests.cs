@@ -1,20 +1,19 @@
-﻿using Soenneker.Email.Mime.Abstract;
-using Soenneker.Tests.FixturedUnit;
-using Xunit;
+using Soenneker.Email.Mime.Abstract;
+using Soenneker.Tests.HostedUnit;
 
 namespace Soenneker.Email.Mime.Tests;
 
-[Collection("Collection")]
-public class MimeUtilTests : FixturedUnitTest
+[ClassDataSource<Host>(Shared = SharedType.PerTestSession)]
+public class MimeUtilTests : HostedUnitTest
 {
     private readonly IMimeUtil _util;
 
-    public MimeUtilTests(Fixture fixture, ITestOutputHelper output) : base(fixture, output)
+    public MimeUtilTests(Host host) : base(host)
     {
         _util = Resolve<IMimeUtil>(true);
     }
 
-    [Fact]
+    [Test]
     public void Default()
     {
 
