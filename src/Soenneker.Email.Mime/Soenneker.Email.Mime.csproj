@@ -46,7 +46,7 @@
     <ItemGroup>
         <PackageReference Include="MailKit" Version="4.17.0" />
         <PackageReference Include="Polly" Version="8.7.0" />
-        <PackageReference Include="Soenneker.Extensions.Configuration" Version="4.0.855" />
+        <PackageReference Include="Soenneker.Extensions.Configuration" Version="4.0.856" />
         <PackageReference Include="Soenneker.Extensions.Stream" Version="4.0.137" />
         <PackageReference Include="Soenneker.Utils.MemoryStream" Version="4.0.1503" />
     </ItemGroup>
