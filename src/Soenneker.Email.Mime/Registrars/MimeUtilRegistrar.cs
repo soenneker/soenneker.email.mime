@@ -13,6 +13,8 @@ public static class MimeUtilRegistrar
     /// <summary>
     /// Adds <see cref="IMimeUtil"/> as a singleton service. <para/>
     /// </summary>
+    /// <param name="services">Service collection that receives the registration.</param>
+    /// <returns>The same service collection, so additional registrations can be chained.</returns>
     public static IServiceCollection AddMimeUtilAsSingleton(this IServiceCollection services)
     {
         services.AddMemoryStreamUtilAsSingleton();
@@ -24,6 +26,8 @@ public static class MimeUtilRegistrar
     /// <summary>
     /// Adds <see cref="IMimeUtil"/> as a scoped service. <para/>
     /// </summary>
+    /// <param name="services">Service collection that receives the registration.</param>
+    /// <returns>The same service collection, so additional registrations can be chained.</returns>
     public static IServiceCollection AddMimeUtilAsScoped(this IServiceCollection services)
     {
         services.AddMemoryStreamUtilAsSingleton();
