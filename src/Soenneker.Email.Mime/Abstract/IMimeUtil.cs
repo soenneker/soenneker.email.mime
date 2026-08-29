@@ -27,10 +27,10 @@ public interface IMimeUtil
     ValueTask<string> ConvertMimeMessageToString(MimeMessage message, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// For Testing
+    /// Sends a MIME message through the configured SMTP client without applying the public retry wrapper.
     /// </summary>
-    /// <param name="message"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
+    /// <param name="message">MIME message to send.</param>
+    /// <param name="cancellationToken">Token used to cancel the SMTP operation.</param>
+    /// <returns>A task that completes after the SMTP send finishes.</returns>
     Task InternalSend(MimeMessage message, CancellationToken cancellationToken = default);
 }
