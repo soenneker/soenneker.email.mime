@@ -28,6 +28,7 @@ public interface IMimeUtil
 
     /// <summary>
     /// Sends a MIME message through the configured SMTP client without applying the public retry wrapper.
+    /// When SMTP is disabled, the call logs and returns without connecting.
     /// </summary>
     /// <param name="message">MIME message to send.</param>
     /// <param name="cancellationToken">Token used to cancel the SMTP operation.</param>

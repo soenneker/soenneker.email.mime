@@ -5,7 +5,7 @@
 
 # Soenneker.Email.Mime
 
-A utility for sending `MimeMessage` objects using SMTP with retry logic and optional logging.
+A configurable MailKit SMTP sender for `MimeMessage` objects, with retry handling and optional MIME-content logging.
 
 ## Install
 
@@ -13,33 +13,59 @@ A utility for sending `MimeMessage` objects using SMTP with retry logic and opti
 dotnet add package Soenneker.Email.Mime
 ```
 
-## Quick start
+## Configuration
 
-```csharp
-using Soenneker.Email.Mime.Registrars;
-using Microsoft.Extensions.DependencyInjection;
-
-var services = new ServiceCollection();
-var result = services.AddMimeUtilAsSingleton();
+```json
+{
+  "Smtp": {
+    "Enable": true,
+    "Host": "smtp.example.com",
+    "Port": 587,
+    "Username": "mailer@example.com",
+    "Password": "use-a-secret-provider",
+    "UseSsl": false,
+    "UseStartTls": true,
+    "AcceptAnyCert": false,
+    "LogContent": false
+  }
+}
 ```
 
-Adds `IMimeUtil` as a singleton service.
+`Enable`, `Host`, `Port`, `Username`, `Password`, and `UseSsl` are required when SMTP is enabled. `UseStartTls`, `AcceptAnyCert`, and `LogContent` default to `false`. If both TLS flags are true, `UseSsl` takes precedence and MailKit uses TLS immediately on connection.
 
-## What you get
+Keep credentials in a secret provider rather than source-controlled configuration. Leave `AcceptAnyCert` false outside isolated development: enabling it disables server-certificate validation and permits interception. If both TLS flags are false, the connection is unencrypted.
 
-- `IMimeUtil` — A utility for sending `MimeMessage` objects using SMTP with retry logic and optional logging.
-- `MimeUtilRegistrar` — A resilient, configurable SMTP email sender.
+## Registration
 
-## API at a glance
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Soenneker.Email.Mime.Abstract;
+using Soenneker.Email.Mime.Registrars;
 
-| API | What it does | Result / important behavior |
-| --- | --- | --- |
-| `IMimeUtil.Send(message, cancellationToken)` | Sends a `MimeMessage` using configured SMTP credentials. Automatically retries on failure using a backoff policy. | A `ValueTask` representing the asynchronous send operation. |
-| `IMimeUtil.ConvertMimeMessageToString(message, cancellationToken)` | Converts a `MimeMessage` into a string representation for logging or inspection. | A string version of the MIME message. |
-| `IMimeUtil.InternalSend(message, cancellationToken)` | Sends a MIME message through the configured SMTP client without applying the public retry wrapper. | A task that completes after the SMTP send finishes. |
-| `MimeUtilRegistrar.AddMimeUtilAsSingleton(services)` | Adds `IMimeUtil` as a singleton service. | The same service collection, so additional registrations can be chained. |
-| `MimeUtilRegistrar.AddMimeUtilAsScoped(services)` | Adds `IMimeUtil` as a scoped service. | The same service collection, so additional registrations can be chained. |
+services.AddMimeUtilAsSingleton();
+```
 
-## Practical notes
+`AddMimeUtilAsScoped()` is also available. In that registration, the utility is scoped while its reusable memory-stream dependency remains singleton; disposing a scope does not tear down that shared dependency.
 
-- Cancellation stops pending work; it does not undo work that has already completed.
+## Send a message
+
+```csharp
+using MimeKit;
+
+var message = new MimeMessage();
+message.From.Add(MailboxAddress.Parse("mailer@example.com"));
+message.To.Add(MailboxAddress.Parse("recipient@example.net"));
+message.Subject = "Deployment complete";
+message.Body = new TextPart("plain") { Text = "Version 42 is live." };
+
+IMimeUtil mime = serviceProvider.GetRequiredService<IMimeUtil>();
+await mime.Send(message, cancellationToken);
+```
+
+When SMTP is disabled, `Send` and `InternalSend` log and return without sending. `Send` retries I/O, socket, timeout, SMTP protocol, and temporary 4xx SMTP command failures five times with exponential backoff and jitter, then rethrows the final failure. Authentication, certificate, invalid-message, and permanent 5xx command failures are not retried. `InternalSend` performs one attempt and is mainly useful when the caller owns retry behavior.
+
+SMTP delivery is not idempotent: a connection can fail after a server accepts a message but before the client receives confirmation, so any retry strategy can produce duplicates. Use a stable message identifier and downstream deduplication when duplicates are unacceptable. A disconnect failure after an acknowledged send is logged and does not trigger another send.
+
+`ConvertMimeMessageToString` returns the complete MIME representation, including headers, body, and encoded attachments. `LogContent: true` writes that data at debug level; leave it disabled when messages may contain personal data, credentials, or confidential attachments.
+
+Cancellation stops pending client work but cannot recall a message already accepted by the SMTP server.

@@ -14,22 +14,22 @@ using Soenneker.Utils.MemoryStream.Abstract;
 using Soenneker.Utils.Random;
 using System;
 using System.IO;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Soenneker.Email.Mime;
 
-/// <inheritdoc cref="IMimeUtil"/>
 public sealed class MimeUtil : IMimeUtil
 {
     private readonly ILogger<MimeUtil> _logger;
     private readonly IMemoryStreamUtil _memoryStreamUtil;
 
-    private readonly string? _username;
-    private readonly string? _password;
-    private readonly string? _host;
-    private readonly int? _port;
+    private readonly string _username = null!;
+    private readonly string _password = null!;
+    private readonly string _host = null!;
+    private readonly int _port;
     private readonly bool _logContent;
     private readonly bool _enabled;
     private readonly bool _useSsl;
@@ -57,7 +57,11 @@ public sealed class MimeUtil : IMimeUtil
             _useStartTls = config.GetValue("Smtp:UseStartTls", false);
         }
 
-        _retryPolicy = Policy.Handle<Exception>(ex => ex is not OperationCanceledException)
+        _retryPolicy = Policy.Handle<IOException>()
+                             .Or<SocketException>()
+                             .Or<TimeoutException>()
+                             .Or<SmtpProtocolException>()
+                             .Or<SmtpCommandException>(ex => (int)ex.StatusCode is >= 400 and < 500)
                              .WaitAndRetryAsync(5, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)) + TimeSpan.FromMilliseconds(RandomUtil.Next(100, 750)),
                                  (exception, timeSpan, attempt, _) =>
                                  {
@@ -86,6 +90,12 @@ public sealed class MimeUtil : IMimeUtil
 
     public async Task InternalSend(MimeMessage message, CancellationToken cancellationToken = default)
     {
+        if (!_enabled)
+        {
+            _logger.LogInformation("[MimeUtil] SMTP sending disabled by config.");
+            return;
+        }
+
         _logger.LogDebug("[MimeUtil] Connecting to SMTP client...");
 
         using var client = new SmtpClient();
@@ -97,10 +107,18 @@ public sealed class MimeUtil : IMimeUtil
 
         SecureSocketOptions options = _useSsl ? SecureSocketOptions.SslOnConnect :  _useStartTls ? SecureSocketOptions.StartTls : SecureSocketOptions.None;
 
-        await client.ConnectAsync(_host, _port!.Value, options, cancellationToken).NoSync();
+        await client.ConnectAsync(_host, _port, options, cancellationToken).NoSync();
         await client.AuthenticateAsync(_username, _password, cancellationToken).NoSync();
         await client.SendAsync(message, cancellationToken).NoSync();
-        await client.DisconnectAsync(true, cancellationToken).NoSync();
+
+        try
+        {
+            await client.DisconnectAsync(true, CancellationToken.None).NoSync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[MimeUtil] Email was accepted, but the SMTP client did not disconnect cleanly.");
+        }
 
         _logger.LogDebug("[MimeUtil] Email sent successfully via SMTP.");
 
