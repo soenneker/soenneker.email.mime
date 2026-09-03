@@ -1,10 +1,9 @@
 ﻿using MailKit.Net.Smtp;
 using MailKit.Security;
+using Kevlar;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MimeKit;
-using Polly;
-using Polly.Retry;
 using Soenneker.Email.Mime.Abstract;
 using Soenneker.Extensions.Configuration;
 using Soenneker.Extensions.Stream;
@@ -36,7 +35,7 @@ public sealed class MimeUtil : IMimeUtil
     private readonly bool _useStartTls;
     private readonly bool _acceptAnyCert;
 
-    private readonly AsyncRetryPolicy _retryPolicy;
+    private readonly Shield _retryShield;
 
     public MimeUtil(IConfiguration config, ILogger<MimeUtil> logger, IMemoryStreamUtil memoryStreamUtil)
     {
@@ -57,16 +56,23 @@ public sealed class MimeUtil : IMimeUtil
             _useStartTls = config.GetValue("Smtp:UseStartTls", false);
         }
 
-        _retryPolicy = Policy.Handle<IOException>()
+        _retryShield = Shield.When<IOException>()
                              .Or<SocketException>()
                              .Or<TimeoutException>()
                              .Or<SmtpProtocolException>()
-                             .Or<SmtpCommandException>(ex => (int)ex.StatusCode is >= 400 and < 500)
-                             .WaitAndRetryAsync(5, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)) + TimeSpan.FromMilliseconds(RandomUtil.Next(100, 750)),
-                                 (exception, timeSpan, attempt, _) =>
+                             .Or<SmtpCommandException>(static ex => (int) ex.StatusCode is >= 400 and < 500)
+                             .Retry(options =>
+                             {
+                                 options.MaxRetries = 5;
+                                 options.Backoff = Backoff.Custom(static attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt))
+                                     + TimeSpan.FromMilliseconds(RandomUtil.Next(100, 750)));
+                                 options.OnRetry = retry =>
                                  {
-                                     _logger.LogWarning(exception, "[MimeUtil] Retry {attempt} after {timeSpan} for email send failure.", attempt, timeSpan);
-                                 });
+                                     _logger.LogWarning(retry.Exception, "[MimeUtil] Retry {attempt} after {timeSpan} for email send failure.",
+                                         retry.AttemptNumber + 1, retry.Delay);
+                                     return default;
+                                 };
+                             });
     }
 
     public async ValueTask Send(MimeMessage message, CancellationToken cancellationToken = default)
@@ -79,7 +85,7 @@ public sealed class MimeUtil : IMimeUtil
 
         try
         {
-            await _retryPolicy.ExecuteAsync(ct => InternalSend(message, ct), cancellationToken).NoSync();
+            await _retryShield.ExecuteAsync(ct => InternalSend(message, ct), cancellationToken).NoSync();
         }
         catch (Exception ex)
         {
