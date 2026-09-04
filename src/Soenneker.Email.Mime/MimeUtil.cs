@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 
 namespace Soenneker.Email.Mime;
 
+/// <inheritdoc cref="IMimeUtil" />
 public sealed class MimeUtil : IMimeUtil
 {
     private readonly ILogger<MimeUtil> _logger;
