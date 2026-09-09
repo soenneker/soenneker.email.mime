@@ -46,8 +46,8 @@
     <ItemGroup>
         <PackageReference Include="MailKit" Version="4.17.0" />
         <PackageReference Include="Kevlar" Version="1.1.0" />
-        <PackageReference Include="Soenneker.Extensions.Configuration" Version="4.0.881" />
+        <PackageReference Include="Soenneker.Extensions.Configuration" Version="4.0.882" />
         <PackageReference Include="Soenneker.Extensions.Stream" Version="4.0.148" />
-        <PackageReference Include="Soenneker.Utils.MemoryStream" Version="4.0.1541" />
+        <PackageReference Include="Soenneker.Utils.MemoryStream" Version="4.0.1542" />
     </ItemGroup>
 </Project>
