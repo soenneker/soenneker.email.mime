@@ -50,6 +50,6 @@
         <PackageReference Include="Kevlar" Version="1.1.1" />
         <PackageReference Include="Soenneker.Extensions.Configuration" Version="4.0.896" />
         <PackageReference Include="Soenneker.Extensions.Stream" Version="4.0.156" />
-        <PackageReference Include="Soenneker.Utils.MemoryStream" Version="4.0.1565" />
+        <PackageReference Include="Soenneker.Utils.MemoryStream" Version="4.0.1567" />
     </ItemGroup>
 </Project>
