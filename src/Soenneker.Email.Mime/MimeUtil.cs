@@ -43,17 +43,17 @@ public sealed class MimeUtil : IMimeUtil
         _logger = logger;
         _memoryStreamUtil = memoryStreamUtil;
 
-        _enabled = config.GetValueStrict<bool>("Smtp:Enable");
+        _enabled = bool.Parse(config.GetStringStrict("Smtp:Enable"));
         _logContent = config.GetValue("Smtp:LogContent", false);
         _acceptAnyCert = config.GetValue("Smtp:AcceptAnyCert", false);
 
         if (_enabled)
         {
-            _username = config.GetValueStrict<string>("Smtp:Username");
-            _password = config.GetValueStrict<string>("Smtp:Password");
-            _host = config.GetValueStrict<string>("Smtp:Host");
-            _port = config.GetValueStrict<int>("Smtp:Port");
-            _useSsl = config.GetValueStrict<bool>("Smtp:UseSsl");
+            _username = config.GetStringStrict("Smtp:Username");
+            _password = config.GetStringStrict("Smtp:Password");
+            _host = config.GetStringStrict("Smtp:Host");
+            _port = (int)new System.ComponentModel.Int32Converter().ConvertFromInvariantString(config.GetStringStrict("Smtp:Port"))!;
+            _useSsl = bool.Parse(config.GetStringStrict("Smtp:UseSsl"));
             _useStartTls = config.GetValue("Smtp:UseStartTls", false);
         }
 
