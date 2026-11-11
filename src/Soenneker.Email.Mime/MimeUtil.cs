@@ -1,5 +1,6 @@
 ﻿using MailKit.Net.Smtp;
 using MailKit.Security;
+using MailKit;
 using Kevlar;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
